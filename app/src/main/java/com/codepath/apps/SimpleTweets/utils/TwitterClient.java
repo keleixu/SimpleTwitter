@@ -28,7 +28,7 @@ public class TwitterClient extends OAuthBaseClient {
 	public static final String REST_CONSUMER_SECRET = "8Ign3thZ7zfrjKbqVcOMy8ksUDFVrN4BgUDLxmbySi2K4mm5r6"; // Change this
 	public static final String REST_CALLBACK_URL = "oauth://codepathtweets"; // Change this (here and in manifest)
 
-    public static final int PAGE_SIZE = 25;
+    public static final int PAGE_SIZE = 10;
 
 	public TwitterClient(Context context) {
 		super(context, REST_API_CLASS, REST_URL, REST_CONSUMER_KEY, REST_CONSUMER_SECRET, REST_CALLBACK_URL);
@@ -39,7 +39,6 @@ public class TwitterClient extends OAuthBaseClient {
 
         RequestParams params = new RequestParams();
         params.put("count", PAGE_SIZE);
-        params.put("since_id", 1);
         if (maxId < Long.MAX_VALUE) {
             params.put("max_id", maxId);
         }
@@ -47,9 +46,45 @@ public class TwitterClient extends OAuthBaseClient {
         getClient().get(apiUrl, params, handler);
     }
 
+    public void getMentionsTimeline(long maxId, AsyncHttpResponseHandler handler) {
+        String apiUrl = getApiUrl("statuses/mentions_timeline.json");
+
+        RequestParams params = new RequestParams();
+        params.put("count", PAGE_SIZE);
+        if (maxId < Long.MAX_VALUE) {
+            params.put("max_id", maxId);
+        }
+
+        getClient().get(apiUrl, params, handler);
+    }
+
+    public void getUserTimeline(long maxId, String screenName, AsyncHttpResponseHandler handler) {
+        String apiUrl = getApiUrl("statuses/user_timeline.json");
+
+        RequestParams params = new RequestParams();
+        params.put("count", PAGE_SIZE);
+        if (maxId < Long.MAX_VALUE) {
+            params.put("max_id", maxId);
+        }
+        if (screenName != null) {
+            params.put("screen_name", screenName);
+        }
+
+        getClient().get(apiUrl, params, handler);
+    }
+
+    public void getUserInfo(String screenName, AsyncHttpResponseHandler handler) {
+        String apiUrl = getApiUrl("users/show.json");
+        RequestParams params = new RequestParams();
+        params.put("include_entities", true);
+        params.put("screen_name", screenName);
+        getClient().get(apiUrl, params, handler);
+    }
+
     public void getCurrentUserInfo(AsyncHttpResponseHandler handler) {
         String apiUrl = getApiUrl("account/verify_credentials.json");
         RequestParams params = new RequestParams();
+        params.put("include_entities", true);
         getClient().get(apiUrl, params, handler);
     }
 

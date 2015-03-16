@@ -2,93 +2,35 @@ package com.codepath.apps.SimpleTweets.activities;
 
 import android.content.Intent;
 import android.os.Bundle;
-import android.support.v4.widget.SwipeRefreshLayout;
+import android.support.v4.app.Fragment;
+import android.support.v4.app.FragmentPagerAdapter;
+import android.support.v4.view.ViewPager;
 import android.support.v7.app.ActionBarActivity;
 import android.view.Menu;
 import android.view.MenuItem;
-import android.widget.ListView;
 
+import com.astuetz.PagerSlidingTabStrip;
 import com.codepath.apps.SimpleTweets.R;
-import com.codepath.apps.SimpleTweets.TwitterApplication;
-import com.codepath.apps.SimpleTweets.adapters.TweetsArrayAdapter;
-import com.codepath.apps.SimpleTweets.extensions.EndlessScrollListener;
-import com.codepath.apps.SimpleTweets.models.Tweet;
-import com.codepath.apps.SimpleTweets.utils.TwitterClient;
-import com.loopj.android.http.JsonHttpResponseHandler;
-
-import org.apache.http.Header;
-import org.json.JSONArray;
-import org.json.JSONObject;
-
-
-import java.util.ArrayList;
+import com.codepath.apps.SimpleTweets.fragments.HomeTimelineFragment;
+import com.codepath.apps.SimpleTweets.fragments.MentionsTimelineFragment;
+import com.codepath.apps.SimpleTweets.fragments.TweetsListFragment;
 
 public class TimelineActivity extends ActionBarActivity {
-    private TwitterClient client;
-    private ArrayList<Tweet> tweets;
-    private TweetsArrayAdapter aTweets;
-    private ListView lvTweets;
-    private SwipeRefreshLayout swipeContainer;
     private final int COMPOSE_ACTIVITY_RESULT = 1;
+    private ViewPager vpPager;
+    private PagerSlidingTabStrip tabStrip;
+    private TweetsPagerAdapter tweetsPagerAdapter;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_timeline);
-        client = TwitterApplication.getRestClient();
 
-        tweets = Tweet.getAll();
-        lvTweets = (ListView) findViewById(R.id.lvTweets);
-        aTweets = new TweetsArrayAdapter(this, tweets);
-        lvTweets.setAdapter(aTweets);
-        lvTweets.setOnScrollListener(new EndlessScrollListener() {
-            @Override
-            public void onLoadMore(int page, int totalItemsCount) {
-                populateTimeline(getMaxId());
-            }
-        });
-        swipeContainer = (SwipeRefreshLayout) findViewById(R.id.swipeContainer);
-        swipeContainer.setOnRefreshListener(new SwipeRefreshLayout.OnRefreshListener() {
-            @Override
-            public void onRefresh() {
-                populateTimeline(Long.MAX_VALUE);
-            }
-        });
-        populateTimeline(Long.MAX_VALUE);
-    }
-
-    private long getMaxId() {
-        long maxId = Long.MAX_VALUE;
-        for (int i = 0; i < aTweets.getCount(); i++) {
-            if (aTweets.getItem(i).getUid() < maxId) {
-                maxId = aTweets.getItem(i).getUid();
-            }
-        }
-        return maxId;
-    }
-
-    private void populateTimeline(final long maxId) {
-        client.getHomeTimeline(maxId, new JsonHttpResponseHandler()  {
-            @Override
-            public void onSuccess(int statusCode, Header[] headers, JSONArray response) {
-                super.onSuccess(statusCode, headers, response);
-
-                if (maxId == Long.MAX_VALUE) {
-                    aTweets.clear();
-                }
-
-                aTweets.addAll(Tweet.fromJSONArray(response));
-                aTweets.notifyDataSetChanged();
-                swipeContainer.setRefreshing(false);
-            }
-
-            @Override
-            public void onFailure(int statusCode, Header[] headers, Throwable throwable,
-                JSONObject errorResponse) {
-                super.onFailure(statusCode, headers, throwable, errorResponse);
-                swipeContainer.setRefreshing(false);
-            }
-        });
+        vpPager = (ViewPager) findViewById(R.id.viewpager);
+        tweetsPagerAdapter = new TweetsPagerAdapter(getSupportFragmentManager());
+        vpPager.setAdapter(tweetsPagerAdapter);
+        tabStrip = (PagerSlidingTabStrip) findViewById(R.id.tabs);
+        tabStrip.setViewPager(vpPager);
     }
 
     @Override
@@ -107,6 +49,8 @@ public class TimelineActivity extends ActionBarActivity {
 
         if (id == R.id.miCompose) {
             showComposeView();
+        } else if (id == R.id.miProfile) {
+            showProfileView();
         }
 
         return super.onOptionsItemSelected(item);
@@ -117,11 +61,67 @@ public class TimelineActivity extends ActionBarActivity {
         startActivityForResult(i, COMPOSE_ACTIVITY_RESULT);
     }
 
+    public void showProfileView() {
+        Intent i = new Intent(this, ProfileActivity.class);
+        startActivity(i);
+    }
+
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         if (requestCode == COMPOSE_ACTIVITY_RESULT) {
-            tweets.clear();
-            populateTimeline(Long.MAX_VALUE);
+            HomeTimelineFragment homeTimelineFragment = (HomeTimelineFragment) tweetsPagerAdapter.getItem(0);
+            homeTimelineFragment.resetList();
+        }
+    }
+
+    public class TweetsPagerAdapter extends FragmentPagerAdapter {
+        final private String tabTitles[] = { "Home", "Mentions" };
+        private HomeTimelineFragment homeTimeLineFragment;
+        private MentionsTimelineFragment mentionsTimelineFragment;
+
+        public TweetsPagerAdapter(android.support.v4.app.FragmentManager fm) {
+            super(fm);
+            homeTimeLineFragment = new HomeTimelineFragment();
+            mentionsTimelineFragment = new MentionsTimelineFragment();
+            homeTimeLineFragment.setListener(new TweetsListFragment.TweetsListFragmentListener() {
+                @Override
+                public void onProfileClicked(String screenName) {
+                    navigateToProfile(screenName);
+                }
+            });
+            mentionsTimelineFragment.setListener(new TweetsListFragment.TweetsListFragmentListener() {
+                @Override
+                public void onProfileClicked(String screenName) {
+                    navigateToProfile(screenName);
+                }
+            });
+        }
+
+        private void navigateToProfile(String screenName) {
+            Intent i = new Intent(TimelineActivity.this, ProfileActivity.class);
+            i.putExtra("screenName", screenName);
+            startActivity(i);
+        }
+
+        @Override
+        public int getCount() {
+            return tabTitles.length;
+        }
+
+        @Override
+        public Fragment getItem(int position) {
+            TweetsListFragment tweetsListFragment = null;
+            if (position == 0) {
+                tweetsListFragment = homeTimeLineFragment;
+            } else if (position == 1) {
+                tweetsListFragment = mentionsTimelineFragment;
+            }
+            return tweetsListFragment;
+        }
+
+        @Override
+        public CharSequence getPageTitle(int position) {
+            return tabTitles[position];
         }
     }
 }

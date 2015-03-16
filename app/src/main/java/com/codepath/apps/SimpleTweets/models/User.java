@@ -23,6 +23,21 @@ public class User extends Model {
     @Column(name = "profileImageUrl")
     private String profileImageUrl;
 
+    @Column(name = "tagLine")
+    private String tagline;
+
+    @Column(name = "followersCount")
+    private int followersCount;
+
+    @Column(name = "followingCount")
+    private int followingCount;
+
+    @Column(name = "statusesCount")
+    private int statusesCount;
+
+    @Column(name = "profileBannerUrl")
+    private String profileBannerUrl;
+
     public User() {
         super();
     }
@@ -43,6 +58,26 @@ public class User extends Model {
         return profileImageUrl;
     }
 
+    public String getTagline() {
+        return tagline;
+    }
+
+    public int getFollowersCount() {
+        return followersCount;
+    }
+
+    public int getFollowingCount() {
+        return followingCount;
+    }
+
+    public int getStatusesCount() {
+        return statusesCount;
+    }
+
+    public String getProfileBannerUrl() {
+        return profileBannerUrl;
+    }
+
     public static User fromJSON(JSONObject jsonObject) {
         User u = new User();
         try {
@@ -50,8 +85,11 @@ public class User extends Model {
             u.uid = jsonObject.getLong("id");
             u.screenName = jsonObject.getString("screen_name");
             u.profileImageUrl = jsonObject.getString("profile_image_url");
-            u.save();
-
+            u.tagline = jsonObject.getString("description");
+            u.followersCount = jsonObject.getInt("followers_count");
+            u.followingCount = jsonObject.getInt("friends_count");
+            u.statusesCount = jsonObject.getInt("statuses_count");
+            u.profileBannerUrl = jsonObject.getString("profile_banner_url");
         } catch (Exception e) {
             e.printStackTrace();
         }

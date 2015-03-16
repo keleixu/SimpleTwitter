@@ -8,4 +8,10 @@
         app:showAsAction="ifRoom|withText"
         android:title="@string/compose">
     </item>
+    <item
+        android:id="@+id/miProfile"
+        android:icon="@drawable/ic_profile"
+        app:showAsAction="ifRoom|withText"
+        android:title="@string/profile">
+    </item>
 </menu>
